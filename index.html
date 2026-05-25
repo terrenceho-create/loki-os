@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loki Creatives OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0B0E14; color: #e2e8f0; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2d2d3a; border-radius: 2px; }
+    input:focus { outline: none; }
+    button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } = Recharts;
+
+    // ── COLOURS ────────────────────────────────────────────────────
+    const C = {
+      bg: "#0B0E14", surface: "rgba(255,255,255,0.03)",
+      border: "rgba(255,255,255,0.07)", accent: "#E8A838",
+      teal: "#7EB8A4", violet: "#A78BFA", green: "#4ade80",
+      red: "#f87171", amber: "#fb923c", text: "#e2e8f0",
+      muted: "#6b7280", dim: "#374151",
+    };
+    const CLIENT_COLORS = {
+      GetGo: "#E8A838", LJ: "#A78BFA", SBDW: "#7EB8A4",
+      TL: "#60a5fa", LG: "#f472b6", default: "#9ca3af",
+    };
+    const STATUS_COLOR = {
+      "Lead": "#6b7280", "Quoted": "#9A7D0A", "Confirmed": "#1A5276",
+      "Deposit Received": "#196F3D", "Shooting": "#6C3483",
+      "Editing": "#E8A838", "First Cut Sent": "#7D6608",
+      "Revisions": "#A04000", "Final Review": "#1A5276",
+      "Ready to Deliver": "#7EB8A4", "Delivered": "#4ade80",
+      "Closed": "#374151",
+    };
+
+    // ── HELPERS ────────────────────────────────────────────────────
+    const hkd = (n) => {
+      if (n === "" || n == null) return "—";
+      const abs = Math.abs(n);
+      const str = abs >= 10000 ? `HK$${(abs/1000).toFixed(1)}k` : `HK$${Math.round(abs).toLocaleString()}`;
+      return n < 0 ? `-${str}` : str;
+    };
+    const pct = (n) => n ? `${Math.round(n * 100)}%` : "0%";
+    const daysUntil = (d) => {
+      if (!d) return null;
+      const t = new Date(); t.setHours(0,0,0,0);
+      return Math.ceil((new Date(d) - t) / 86400000);
+    };
+
+    // ── BASE COMPONENTS ────────────────────────────────────────────
+    const Card = ({ children, style }) => (
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "18px 20px", ...style }}>
+        {children}
+      </div>
+    );
+    const Label = ({ children }) => (
+      <div style={{ fontSize: "0.63rem", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.12em", color: C.muted, marginBottom: 6 }}>
+        {children}
+      </div>
+    );
+    const KPI = ({ label, value, sub, accent, icon }) => (
+      <Card style={{ flex: 1, minWidth: 140 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Label>{label}</Label>
+          <span style={{ fontSize: "1rem", opacity: 0.6 }}>{icon}</span>
+        </div>
+        <div style={{ fontSize: "1.85rem", fontFamily: "'Fraunces', serif", fontWeight: 600, color: accent || C.accent, lineHeight: 1.1, marginBottom: 4 }}>
+          {value}
+        </div>
+        {sub && <div style={{ fontSize: "0.67rem", color: C.muted }}>{sub}</div>}
+      </Card>
+    );
+    const Badge = ({ status }) => {
+      const color = STATUS_COLOR[status] || C.muted;
+      return (
+        <span style={{ fontSize: "0.6rem", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em", color, background: `${color}20`, border: `1px solid ${color}40`, padding: "2px 7px", borderRadius: 4 }}>
+          {status}
+        </span>
+      );
+    };
+
+    // ── SETUP SCREEN ───────────────────────────────────────────────
+    const SetupScreen = ({ onSave }) => {
+      const [url, setUrl] = useState("");
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <div style={{ maxWidth: 460, width: "100%" }}>
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: "0.58rem", fontFamily: "monospace", color: C.muted, letterSpacing: "0.2em", marginBottom: 8 }}>FREELANCE OS</div>
+              <div style={{ fontSize: "1.8rem", fontFamily: "'Fraunces', serif", fontStyle: "italic", color: C.text }}>
+                Connect your <span style={{ color: C.accent }}>Sheet</span>
+              </div>
+            </div>
+            <Card>
+              <div style={{ fontSize: "0.78rem", color: C.muted, lineHeight: 1.8, marginBottom: 20 }}>
+                <p style={{ marginBottom: 10, color: C.text, fontWeight: 500 }}>部署步驟：</p>
+                <ol style={{ paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <li>Google Sheet → Extensions → Apps Script</li>
+                  <li>加入 <code style={{ color: C.accent, background: "rgba(232,168,56,0.1)", padding: "1px 5px", borderRadius: 3 }}>SHEET_API.gs</code></li>
+                  <li>右上角「部署」→「新增部署作業」</li>
+                  <li>類型: 網頁應用程式 ／ 存取權: 所有人</li>
+                  <li>複製 Web app URL 貼入下方</li>
+                </ol>
+              </div>
+              <input
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://script.google.com/macros/s/..."
+                style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: "0.78rem", fontFamily: "monospace", marginBottom: 12 }}
+              />
+              <button
+                onClick={() => url.trim() && onSave(url.trim())}
+                style={{ width: "100%", background: C.accent, color: "#0B0E14", border: "none", borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
+              >連接 Sheet →</button>
+            </Card>
+          </div>
+        </div>
+      );
+    };
+
+    // ── DASHBOARD VIEW ─────────────────────────────────────────────
+    const DashboardView = ({ data }) => {
+      const { dashboard: d = {}, jobs = [], capacity = {} } = data;
+      const weekly = (capacity.weekly || []).slice(0, 8).reverse();
+      const upcoming = jobs
+        .filter(j => j.status !== "Closed" && j.deadline)
+        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+        .slice(0, 5);
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <KPI label="本月收入" value={hkd(d.monthly_income)} sub="已到帳" accent={C.accent} icon="💰" />
+            <KPI label="淨現金流" value={hkd(d.net_cashflow)} accent={d.net_cashflow >= 0 ? C.green : C.red} sub={d.net_cashflow >= 0 ? "正現金流" : "留意支出"} icon="📊" />
+            <KPI label="今年總收入" value={hkd(d.ytd_income)} sub="2026 YTD" accent={C.teal} icon="📅" />
+            <KPI label="進行中專案" value={d.active_jobs || 0} sub={`本月交付 ${d.delivered_month || 0} 個`} accent={C.violet} icon="📁" />
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <KPI label="本週 Billable" value={`${(+d.billable_hrs_week||0).toFixed(1)}h`} sub={`總工時 ${(+d.total_hrs_week||0).toFixed(1)}h`} accent={C.accent} icon="⏱" />
+            <KPI label="本週 Utilization" value={pct(d.utilization_week)} accent={d.utilization_week>=0.8?C.green:d.utilization_week>=0.5?C.amber:C.red} icon="⚡" />
+            <KPI label="本月 Billable" value={`${(+d.billable_hrs_month||0).toFixed(1)}h`} sub="月累計" accent={C.teal} icon="📋" />
+            <KPI label="積壓工時" value={`${(+d.backlog_hrs||0).toFixed(1)}h`} sub="進行中 jobs" accent={(+d.backlog_hrs||0)>40?C.red:C.muted} icon="⏳" />
+          </div>
+
+          {weekly.length > 0 && (
+            <Card>
+              <Label>過去 8 週 Billable 工時</Label>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={weekly} barCategoryGap="30%">
+                  <XAxis dataKey="week_start" tick={{ fill: C.muted, fontSize: 10 }} tickFormatter={v => v ? v.slice(5) : ""} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: "#1a1a2e", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: "0.75rem" }} formatter={(v) => [`${(+v).toFixed(1)}h`]} />
+                  <ReferenceLine y={16} stroke={C.accent} strokeDasharray="4 2" strokeOpacity={0.5} />
+                  <Bar dataKey="total_hours" fill={`${C.accent}28`} radius={[3,3,0,0]} />
+                  <Bar dataKey="billable_hours" fill={C.accent} radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize: "0.63rem", color: C.muted, marginTop: 4 }}>虛線 = 16h 週目標</div>
+            </Card>
+          )}
+
+          {upcoming.length > 0 && (
+            <Card>
+              <Label>即將到期</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                {upcoming.map((j, i) => {
+                  const days = daysUntil(j.deadline);
+                  const urgency = days==null?C.muted:days<0?C.red:days<=3?C.amber:days<=7?C.accent:C.muted;
+                  const cc = CLIENT_COLORS[j.client_id] || CLIENT_COLORS.default;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)" }}>
+                      <div style={{ width: 3, height: 28, borderRadius: 2, background: cc, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.8rem", color: C.text, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{j.project_name}</div>
+                        <div style={{ fontSize: "0.65rem", color: C.muted }}>{j.client_id} · {j.job_type}</div>
+                      </div>
+                      <Badge status={j.status} />
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: "0.78rem", fontFamily: "monospace", color: urgency, fontWeight: 600 }}>
+                          {days==null?"—":days<0?`逾期${Math.abs(days)}日`:days===0?"今日":`${days}日後`}
+                        </div>
+                        <div style={{ fontSize: "0.62rem", color: C.dim }}>{j.deadline}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+        </div>
+      );
+    };
+
+    // ── PROJECTS VIEW ──────────────────────────────────────────────
+    const ProjectsView = ({ data }) => {
+      const { jobs = [] } = data;
+      const active = jobs.filter(j => !["Closed","Delivered"].includes(j.status));
+      const cols = ["Editing","Revisions","First Cut Sent","Ready to Deliver"];
+      return (
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
+          {cols.map(col => {
+            const colJobs = active.filter(j => j.status === col);
+            const color = STATUS_COLOR[col] || C.muted;
+            return (
+              <div key={col} style={{ flex: "0 0 215px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8, borderBottom: `1px solid ${color}40` }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                  <span style={{ fontSize: "0.65rem", fontFamily: "monospace", color, textTransform: "uppercase", letterSpacing: "0.08em" }}>{col}</span>
+                  <span style={{ fontSize: "0.6rem", color: C.dim, marginLeft: "auto" }}>{colJobs.length}</span>
+                </div>
+                {colJobs.length === 0 && <div style={{ fontSize: "0.7rem", color: C.dim, padding: "12px 0", textAlign: "center" }}>—</div>}
+                {colJobs.map((j, i) => {
+                  const cc = CLIENT_COLORS[j.client_id] || CLIENT_COLORS.default;
+                  const actual = parseFloat(j["actual_hours"] || 0);
+                  const est = parseFloat(j["est_hours"] || 0);
+                  const p = est > 0 ? Math.min(actual / est, 1) : 0;
+                  return (
+                    <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                      <div style={{ fontSize: "0.77rem", color: C.text, fontWeight: 500, lineHeight: 1.3, marginBottom: 6 }}>{j.project_name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: est > 0 ? 8 : 0 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: cc }} />
+                        <span style={{ fontSize: "0.62rem", color: C.muted }}>{j.client_id}</span>
+                      </div>
+                      {est > 0 && (
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <span style={{ fontSize: "0.58rem", color: C.dim }}>工時</span>
+                            <span style={{ fontSize: "0.58rem", color: C.muted, fontFamily: "monospace" }}>{actual.toFixed(1)}/{est}h</span>
+                          </div>
+                          <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+                            <div style={{ height: "100%", width: `${p*100}%`, background: color, borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      )}
+                      {j.deadline && <div style={{ marginTop: 8, fontSize: "0.6rem", color: C.dim, fontFamily: "monospace" }}>⛳ {j.deadline}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    // ── CAPACITY VIEW ──────────────────────────────────────────────
+    const CapacityView = ({ data }) => {
+      const { capacity = {} } = data;
+      const weekly = (capacity.weekly || []).slice().reverse();
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <Card>
+            <Label>每週工時歷史（最近 12 週）</Label>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={weekly} barCategoryGap="25%">
+                <XAxis dataKey="week_start" tick={{ fill: C.muted, fontSize: 10 }} tickFormatter={v => v?v.slice(5):""} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: "#1a1a2e", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: "0.75rem" }} formatter={(v,n) => [`${(+v).toFixed(1)}h`, n==="billable_hours"?"Billable":"Non-Billable"]} />
+                <ReferenceLine y={25} stroke={C.green} strokeDasharray="4 2" strokeOpacity={0.4} />
+                <ReferenceLine y={16} stroke={C.accent} strokeDasharray="4 2" strokeOpacity={0.4} />
+                <Bar dataKey="billable_hours" name="billable_hours" fill={C.accent} radius={[3,3,0,0]} stackId="a" />
+                <Bar dataKey="non_billable" name="non_billable" fill={`${C.teal}50`} radius={[3,3,0,0]} stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+              <span style={{ fontSize: "0.63rem", color: C.green }}>— 目標 25h</span>
+              <span style={{ fontSize: "0.63rem", color: C.accent }}>— 保守 16h</span>
+            </div>
+          </Card>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {weekly.slice(-4).reverse().map((w, i) => (
+              <Card key={i} style={{ flex: 1, minWidth: 130 }}>
+                <div style={{ fontSize: "0.63rem", color: C.muted, fontFamily: "monospace", marginBottom: 4 }}>{w.week_start ? w.week_start.slice(5) : "—"}</div>
+                <div style={{ fontSize: "1.5rem", fontFamily: "'Fraunces', serif", color: C.accent }}>{(+w.billable_hours||0).toFixed(1)}h</div>
+                <div style={{ fontSize: "0.65rem", color: C.muted, marginBottom: 8 }}>{w.status || "—"}</div>
+                <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", width: `${Math.min((+w.billable_hours||0)/25,1)*100}%`, background: C.accent, borderRadius: 2 }} />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // ── MAIN APP ───────────────────────────────────────────────────
+    const STORAGE_KEY = "loki_gas_url";
+    const NAV = [
+      { id: "dashboard", label: "總覽",   icon: "◈" },
+      { id: "projects",  label: "專案",   icon: "▦" },
+      { id: "capacity",  label: "容量",   icon: "⏱" },
+      { id: "gantt",     label: "甘特圖", icon: "▤", soon: true },
+      { id: "finance",   label: "財務",   icon: "◎", soon: true },
+    ];
+
+    function App() {
+      const [gasUrl, setGasUrl]     = useState(() => localStorage.getItem(STORAGE_KEY) || null);
+      const [data, setData]         = useState(null);
+      const [loading, setLoading]   = useState(false);
+      const [error, setError]       = useState(null);
+      const [activeTab, setActive]  = useState("dashboard");
+      const [lastFetch, setLastFetch] = useState(null);
+
+      const fetchData = useCallback(async (url) => {
+        if (!url) return;
+        setLoading(true); setError(null);
+        try {
+          const res = await fetch(url, { redirect: "follow" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (json.error) throw new Error(json.error);
+          setData(json);
+          setLastFetch(new Date());
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      }, []);
+
+      useEffect(() => { if (gasUrl) fetchData(gasUrl); }, [gasUrl]);
+
+      const handleSave = (url) => {
+        localStorage.setItem(STORAGE_KEY, url);
+        setGasUrl(url);
+      };
+      const handleDisconnect = () => {
+        localStorage.removeItem(STORAGE_KEY);
+        setGasUrl(null); setData(null);
+      };
+
+      if (!gasUrl) return <SetupScreen onSave={handleSave} />;
+
+      return (
+        <div style={{ minHeight: "100vh" }}>
+          {/* Header */}
+          <div style={{ padding: "20px 28px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div>
+              <div style={{ fontSize: "0.57rem", fontFamily: "monospace", color: C.muted, letterSpacing: "0.2em", marginBottom: 4 }}>FREELANCE OS</div>
+              <div style={{ fontSize: "1.5rem", fontFamily: "'Fraunces', serif", fontStyle: "italic", letterSpacing: "-0.02em" }}>
+                Loki Creatives <span style={{ color: C.accent }}>Studio</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {lastFetch && <div style={{ fontSize: "0.62rem", color: C.dim, fontFamily: "monospace" }}>{lastFetch.toLocaleTimeString("en-HK",{hour:"2-digit",minute:"2-digit"})}</div>}
+              <button onClick={() => fetchData(gasUrl)} disabled={loading}
+                style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, color: loading?C.dim:C.teal, borderRadius: 6, padding: "4px 10px", fontSize: "0.7rem", cursor: loading?"default":"pointer", fontFamily: "monospace" }}>
+                {loading ? "..." : "↻ 刷新"}
+              </button>
+              <button onClick={handleDisconnect}
+                style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.dim, borderRadius: 6, padding: "4px 10px", fontSize: "0.7rem", cursor: "pointer", fontFamily: "monospace" }}>✕</button>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <div style={{ display: "flex", gap: 4, padding: "16px 28px 0", borderBottom: `1px solid ${C.border}`, marginTop: 16 }}>
+            {NAV.map(n => (
+              <button key={n.id} onClick={() => !n.soon && setActive(n.id)}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: "8px 8px 0 0", cursor: n.soon?"default":"pointer", background: activeTab===n.id?"rgba(232,168,56,0.1)":"transparent", border: activeTab===n.id?`1px solid rgba(232,168,56,0.2)`:"1px solid transparent", borderBottom: activeTab===n.id?`1px solid #0B0E14`:"1px solid transparent", color: activeTab===n.id?C.accent:n.soon?C.dim:C.muted, fontSize: "0.72rem", fontFamily: "monospace", opacity: n.soon?0.4:1 }}>
+                <span style={{ fontSize: "0.67rem" }}>{n.icon}</span>
+                {n.label}
+                {n.soon && <span style={{ fontSize: "0.5rem", color: C.dim }}>soon</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: "22px 28px" }}>
+            {error && (
+              <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 18, fontSize: "0.77rem", color: C.red, display: "flex", gap: 12, alignItems: "center" }}>
+                <span>⚠️ 無法連接：{error}</span>
+                <button onClick={() => fetchData(gasUrl)} style={{ color: C.red, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontSize: "0.77rem" }}>重試</button>
+              </div>
+            )}
+            {loading && !data && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 300, gap: 12, opacity: 0.4 }}>
+                <div style={{ fontSize: "2rem" }}>⟳</div>
+                <div style={{ fontSize: "0.78rem", color: C.muted, fontFamily: "monospace" }}>正在讀取 Sheet 數據...</div>
+              </div>
+            )}
+            {data && activeTab === "dashboard" && <DashboardView data={data} />}
+            {data && activeTab === "projects"  && <ProjectsView  data={data} />}
+            {data && activeTab === "capacity"  && <CapacityView  data={data} />}
+            {["gantt","finance"].includes(activeTab) && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, opacity: 0.45 }}>
+                <div style={{ fontSize: "2.5rem" }}>{activeTab==="gantt"?"📅":"💰"}</div>
+                <div style={{ fontSize: "0.78rem", color: C.muted, fontFamily: "monospace" }}>COMING SOON</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
