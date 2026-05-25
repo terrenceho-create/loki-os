@@ -139,7 +139,8 @@ function SetupScreen({onSave}){
 function DashboardView({data}){
   const{dashboard:d={},jobs=[],capacity={}}=data;
   const weekly=(capacity.weekly||[]).slice(0,10).reverse();
-  const upcoming=jobs.filter(j=>j.status!=="Closed"&&j.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
+  const ACTIVE=["Confirmed","Deposit Received","Shooting","Editing","First Cut Sent","Revisions","Final Review","Ready to Deliver"];
+  const upcoming=jobs.filter(j=>ACTIVE.includes(j.status)&&j.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -196,7 +197,7 @@ function DashboardView({data}){
 /* ── PROJECTS VIEW ───────────────────────── */
 function ProjectsView({data}){
   const{jobs=[]}=data;
-  const active=jobs.filter(j=>!["Closed","Delivered"].includes(j.status));
+  const active=jobs.filter(j=>["Confirmed","Deposit Received","Shooting","Editing","First Cut Sent","Revisions","Final Review","Ready to Deliver"].includes(j.status));
   const cols=["Editing","Revisions","First Cut Sent","Ready to Deliver"];
   return(
     <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8}}>
