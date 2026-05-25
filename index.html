@@ -199,7 +199,7 @@ function ProjectsView({data}){
   const{jobs=[]}=data;
   const active=jobs.filter(j=>["Deposit Received","Shooting","Editing","First Cut Sent","Revisions"].includes(j.status));
   const COLS=[
-    {id:"Deposit Received", label:"Footage In",      note:"素材到手，未開剪"},
+    {id:"Footage In", label:"Footage In",      note:"素材到手，未開剪"},
     {id:"Editing",          label:"Editing",         note:"剪緊"},
     {id:"First Cut Sent",   label:"First Cut Sent",  note:"初剪出咗，等尾款"},
     {id:"Revisions",        label:"Revisions",       note:"收尾款，做修改"},
