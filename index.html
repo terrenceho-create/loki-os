@@ -139,7 +139,7 @@ function SetupScreen({onSave}){
 function DashboardView({data}){
   const{dashboard:d={},jobs=[],capacity={}}=data;
   const weekly=(capacity.weekly||[]).slice(0,10).reverse();
-  const ACTIVE=["Confirmed","Deposit Received","Shooting","Editing","First Cut Sent","Revisions","Final Review","Ready to Deliver"];
+  const ACTIVE=["Deposit Received","Shooting","Editing","First Cut Sent","Revisions"];
   const upcoming=jobs.filter(j=>ACTIVE.includes(j.status)&&j.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -197,19 +197,29 @@ function DashboardView({data}){
 /* ── PROJECTS VIEW ───────────────────────── */
 function ProjectsView({data}){
   const{jobs=[]}=data;
-  const active=jobs.filter(j=>["Confirmed","Deposit Received","Shooting","Editing","First Cut Sent","Revisions","Final Review","Ready to Deliver"].includes(j.status));
-  const cols=["Editing","Revisions","First Cut Sent","Ready to Deliver"];
+  const active=jobs.filter(j=>["Deposit Received","Shooting","Editing","First Cut Sent","Revisions"].includes(j.status));
+  const COLS=[
+    {id:"Deposit Received", label:"Footage In",      note:"素材到手，未開剪"},
+    {id:"Editing",          label:"Editing",         note:"剪緊"},
+    {id:"First Cut Sent",   label:"First Cut Sent",  note:"初剪出咗，等尾款"},
+    {id:"Revisions",        label:"Revisions",       note:"收尾款，做修改"},
+  ];
+  const cols=COLS;
   return(
     <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8}}>
-      {cols.map(col=>{
+      {cols.map(({id,label,note})=>{
+        const col=id;
         const cj=active.filter(j=>j.status===col);
         const color=SC[col]||C.muted;
         return(
-          <div key={col} style={{flex:"0 0 210px",display:"flex",flexDirection:"column",gap:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,paddingBottom:8,borderBottom:`1px solid ${color}40`}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:color}}/>
-              <span style={{fontSize:"0.64rem",fontFamily:"monospace",color,textTransform:"uppercase",letterSpacing:"0.08em"}}>{col}</span>
-              <span style={{fontSize:"0.6rem",color:C.dim,marginLeft:"auto"}}>{cj.length}</span>
+          <div key={col} style={{flex:"0 0 215px",display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{paddingBottom:8,borderBottom:`1px solid ${color}40`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:color}}/>
+                <span style={{fontSize:"0.64rem",fontFamily:"monospace",color,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</span>
+                <span style={{fontSize:"0.6rem",color:C.dim,marginLeft:"auto"}}>{cj.length}</span>
+              </div>
+              <div style={{fontSize:"0.6rem",color:C.dim,paddingLeft:15}}>{note}</div>
             </div>
             {cj.length===0&&<div style={{fontSize:"0.7rem",color:C.dim,padding:"12px 0",textAlign:"center"}}>—</div>}
             {cj.map((j,i)=>{
