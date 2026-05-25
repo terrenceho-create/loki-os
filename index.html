@@ -40,7 +40,7 @@ const C={
 const CC={GetGo:"#E8A838",LJ:"#A78BFA",SBDW:"#7EB8A4",TL:"#60a5fa",LG:"#f472b6",default:"#9ca3af"};
 const SC={
   "Lead":"#6b7280","Quoted":"#9A7D0A","Confirmed":"#1A5276","Deposit Received":"#196F3D",
-  "Shooting":"#6C3483","Editing":"#E8A838","First Cut Sent":"#7D6608","Revisions":"#A04000",
+  "Footage In":"#6C3483","Editing":"#E8A838","First Cut Sent":"#7D6608","Revisions":"#A04000",
   "Final Review":"#1A5276","Ready to Deliver":"#7EB8A4","Delivered":"#4ade80","Closed":"#374151"
 };
 
@@ -139,7 +139,7 @@ function SetupScreen({onSave}){
 function DashboardView({data}){
   const{dashboard:d={},jobs=[],capacity={}}=data;
   const weekly=(capacity.weekly||[]).slice(0,10).reverse();
-  const ACTIVE=["Deposit Received","Shooting","Editing","First Cut Sent","Revisions"];
+  const ACTIVE=["Deposit Received","Footage In","Editing","First Cut Sent","Revisions"];
   const upcoming=jobs.filter(j=>ACTIVE.includes(j.status)&&j.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -197,7 +197,7 @@ function DashboardView({data}){
 /* ── PROJECTS VIEW ───────────────────────── */
 function ProjectsView({data}){
   const{jobs=[]}=data;
-  const active=jobs.filter(j=>["Deposit Received","Shooting","Editing","First Cut Sent","Revisions"].includes(j.status));
+  const active=jobs.filter(j=>["Deposit Received","Footage In","Editing","First Cut Sent","Revisions"].includes(j.status));
   const COLS=[
     {id:"Footage In", label:"Footage In",      note:"素材到手，未開剪"},
     {id:"Editing",          label:"Editing",         note:"剪緊"},
