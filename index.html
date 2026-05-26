@@ -418,14 +418,13 @@ function GanttView({data}){
               const actual=+(j["actual_hours"]||0),est=+(j["est_hours"]||0);
               const prog=est>0?Math.min(actual/est,1):0;
               const days=daysUntil(j.deadline);
-              const dot=days!=null&&days<=3?C.red:days!=null&&days<=7?C.amber:cc;
+              {/*const dot=days!=null&&days<=3?C.red:days!=null&&days<=7?C.amber:cc;*/}
               return(
                 <div key={i} style={{height:ROW,position:"relative",borderBottom:`1px solid ${C.border}`}}>
                   <div style={{position:"absolute",left:`${l}%`,width:`${w}%`,height:24,top:"50%",transform:"translateY(-50%)",background:`${cc}20`,border:`1px solid ${cc}45`,borderRadius:5,overflow:"hidden",minWidth:4,zIndex:2}}>
                     {prog>0&&<div style={{position:"absolute",inset:0,width:`${prog*100}%`,background:`${cc}55`,borderRadius:5}}/>}
                     {w>7&&prog>0&&<div style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:"0.55rem",fontFamily:"monospace",color:cc}}>{Math.round(prog*100)}%</div>}
                   </div>
-                  <div style={{position:"absolute",left:`${r}%`,width:7,height:7,borderRadius:"50%",background:dot,transform:"translateX(-50%)",zIndex:4,boxShadow:days!=null&&days<=7?`0 0 6px ${dot}`:undefined}}/>
                 </div>
               );
             })}
