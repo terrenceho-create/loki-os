@@ -50,33 +50,40 @@ const pct=n=>n?`${Math.round(n*100)}%`:"0%";
 const daysUntil=d=>{if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d)-t)/86400000)};
 
 /* ── CSS BAR CHART ───────────────────────── */
-function BarChart({data,valueKey="billable_hours",labelKey="week_start",bgKey,refLine,height=150,color}){
-  const vals=data.map(d=>+(d[valueKey]||0));
-  const bgVals=bgKey?data.map(d=>+(d[bgKey]||0)):null;
-  const max=Math.max(...vals,...(bgVals||[]),refLine||0,1)*1.1;
-  const col=color||C.accent;
+function BarChart({data,segments,labelKey="week_start",refLine,height=150}){
+  const stacked=data.map(d=>({...d,_t:segments.reduce((s,g)=>s+(+(d[g.key]||0)),0)}));
+  const max=Math.max(...stacked.map(d=>d._t),refLine||0,1)*1.1;
   return(
-    <div>
-      <div className="bar-wrap" style={{height,alignItems:"flex-end",position:"relative"}}>
-        {refLine&&<div style={{position:"absolute",left:0,right:0,bottom:`${(refLine/max)*100}%`,borderTop:`1px dashed ${col}60`,zIndex:1,pointerEvents:"none"}}/>}
-        {data.map((d,i)=>{
-          const v=+(d[valueKey]||0);
-          const bg=bgKey?+(d[bgKey]||0):0;
-          const label=d[labelKey]?String(d[labelKey]).slice(5):"";
-          const tip=`${label}  ${v.toFixed(1)}h billable`;
+    <div style={{width:"100%"}}>
+      <div style={{display:"flex",gap:2,height,position:"relative",alignItems:"flex-end"}}>
+        {refLine>0&&(
+          <div style={{position:"absolute",left:0,right:0,bottom:`${(refLine/max)*height}px`,borderTop:`1px dashed ${segments[0].color}`,opacity:0.5,zIndex:4,pointerEvents:"none"}}/>
+        )}
+        {stacked.map((d,i)=>{
+          let bot=0;
+          const segs=segments.map(seg=>{
+            const v=+(d[seg.key]||0),h=(v/max)*height,b=bot;
+            bot+=h;return{...seg,h,b};
+          });
           return(
-            <div key={i} className="bar-col tooltip" data-tip={tip} style={{height:"100%",justifyContent:"flex-end"}}>
-              {bgKey&&<div className="bar-fill" style={{height:`${Math.min(bg/max,1)*100}%`,background:`${col}25`,marginBottom:0}}/>}
-              <div className="bar-fill" style={{height:`${Math.min(v/max,1)*100}%`,background:col}}/>
-              <div className="bar-label">{label}</div>
+            <div key={i} style={{flex:1,position:"relative",height:"100%",minWidth:0}}>
+              {segs.map((s,si)=>s.h>0&&(
+                <div key={si} style={{position:"absolute",bottom:`${s.b}px`,left:0,right:0,height:`${s.h}px`,background:s.color,borderRadius:si===segs.length-1?"3px 3px 0 0":"0"}}/>
+              ))}
             </div>
           );
         })}
       </div>
+      <div style={{display:"flex",gap:2,marginTop:5}}>
+        {data.map((d,i)=>(
+          <div key={i} style={{flex:1,textAlign:"center",fontSize:"0.57rem",color:C.muted,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {d[labelKey]?String(d[labelKey]).slice(5):""}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
 /* ── BASE COMPONENTS ─────────────────────── */
 const Card=({children,style})=>(
   <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 20px",...style}}>{children}</div>
@@ -164,9 +171,21 @@ function DashboardView({data}){
         <Card>
           <Lbl>過去 10 週 Billable 工時</Lbl>
           <div style={{marginTop:8}}>
-            <BarChart data={weekly} valueKey="billable_hours" labelKey="week_start" bgKey="total_hours" refLine={16} height={130} color={C.accent}/>
-          </div>
-          <div style={{fontSize:"0.62rem",color:C.muted,marginTop:6}}>虛線 = 16h 週目標 ／ 淺色 = 總工時</div>
+            <BarChart
+                  data={weekly.map(w=>({...w,_onb:Math.max((+(w.non_billable||0))-(+(w.marketing_hours||0)),0)}))}
+                  segments={[{key:"billable_hours",color:C.accent},{key:"_onb",color:C.teal+"99"},{key:"marketing_hours",color:C.violet+"99"}]}
+                  labelKey="week_start" refLine={16} height={130}
+                />
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap",alignItems:"center"}}>
+                {[[C.accent,"Billable"],[C.teal+"99","Non-Billable"],[C.violet+"99","Marketing"]].map(([c,l])=>(
+                  <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{width:10,height:10,borderRadius:2,background:c}}/>
+                    <span style={{fontSize:"0.6rem",color:C.muted}}>{l}</span>
+                  </div>
+                ))}
+                <span style={{fontSize:"0.6rem",color:C.muted}}>— 16h 目標</span>
+              </div>
         </Card>
       )}
       {upcoming.length>0&&(
@@ -439,18 +458,26 @@ function GanttView({data}){
 function CapacityView({data}){
   const{capacity={}}=data;
   const weekly=(capacity.weekly||[]).slice().reverse();
-  const recent=weekly.slice(-4).reverse();
+  const recent=weekly.slice(-8).reverse();
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card>
         <Lbl>每週工時歷史（最近 12 週）</Lbl>
         <div style={{marginTop:10}}>
-          <BarChart data={weekly} valueKey="billable_hours" labelKey="week_start" bgKey="total_hours" refLine={25} height={170} color={C.accent}/>
+          <BarChart
+            data={weekly.map(w=>({...w,_onb:Math.max((+(w.non_billable||0))-(+(w.marketing_hours||0)),0)}))}
+            segments={[{key:"billable_hours",color:C.accent},{key:"_onb",color:C.teal+"99"},{key:"marketing_hours",color:C.violet+"99"}]}
+            labelKey="week_start" refLine={25} height={180}
+          />
         </div>
-        <div style={{display:"flex",gap:16,marginTop:8}}>
-          <span style={{fontSize:"0.62rem",color:C.green}}>— 目標 25h</span>
-          <span style={{fontSize:"0.62rem",color:`${C.accent}90`}}>░ 總工時</span>
-          <span style={{fontSize:"0.62rem",color:C.accent}}>▮ Billable</span>
+        <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          {[[C.accent,"Billable"],[C.teal+"99","Non-Billable"],[C.violet+"99","Marketing"]].map(([c,l])=>(
+            <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:10,height:10,borderRadius:2,background:c}}/>
+              <span style={{fontSize:"0.6rem",color:C.muted}}>{l}</span>
+            </div>
+          ))}
+          <span style={{fontSize:"0.6rem",color:C.muted}}>— 25h 目標</span>
         </div>
       </Card>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
