@@ -262,6 +262,122 @@ function ProjectsView({data}){
 }
 
 /* ── CAPACITY VIEW ───────────────────────── */
+function GanttView({data}){
+  const{jobs=[],capacity={}}=data;
+  const today=new Date();today.setHours(0,0,0,0);
+  const active=jobs
+    .filter(j=>!["Closed","Delivered"].includes(j.status)&&j.start_date&&j.deadline)
+    .sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+
+  if(!active.length)return(
+    <Card><div style={{color:C.muted,textAlign:"center",padding:40,fontFamily:"monospace",fontSize:"0.8rem"}}>冇進行中嘅 Jobs 有 start_date + deadline</div></Card>
+  );
+
+  let rStart=new Date(Math.min(...active.map(j=>new Date(j.start_date))));
+  let rEnd=new Date(Math.max(...active.map(j=>new Date(j.deadline))));
+  rStart.setDate(rStart.getDate()-7);
+  rEnd.setDate(rEnd.getDate()+14);
+  const totalMs=rEnd-rStart;
+  const pct=d=>Math.max(0,Math.min(100,((new Date(d)-rStart)/totalMs)*100));
+  const todayPct=pct(today);
+
+  const months=[];
+  const mc=new Date(rStart);mc.setDate(1);
+  while(mc<=rEnd){
+    months.push({label:mc.toLocaleDateString("zh-HK",{month:"short",day:"numeric"}),pct:pct(new Date(mc))});
+    mc.setMonth(mc.getMonth()+1);
+  }
+
+  const ROW=46,LW=170;
+  return(
+    <Card style={{padding:"16px 0",overflow:"hidden"}}>
+      <div style={{padding:"0 20px 10px"}}><Lbl>甘特圖 — 進行中 Jobs</Lbl></div>
+      <div style={{display:"flex"}}>
+
+        {/* 左欄：Job 名稱 */}
+        <div style={{width:LW,flexShrink:0,paddingLeft:20}}>
+          <div style={{height:28}}/>
+          {active.map((j,i)=>{
+            const cc=CC[j.client_id]||CC.default;
+            return(
+              <div key={i} style={{height:ROW,display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{width:3,height:22,borderRadius:2,background:cc,marginRight:8,flexShrink:0}}/>
+                <div style={{overflow:"hidden",width:LW-20}}>
+                  <div style={{fontSize:"0.73rem",color:C.text,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{j.project_name}</div>
+                  <div style={{fontSize:"0.6rem",color:C.muted}}>{j.client_id} · {j.status}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 右欄：Timeline */}
+        <div style={{flex:1,overflowX:"auto",position:"relative",minWidth:0,paddingRight:20}}>
+
+          {/* 月份標籤 */}
+          <div style={{height:28,position:"relative",borderBottom:`1px solid ${C.border}`}}>
+            {months.map((m,i)=>(
+              <span key={i} style={{position:"absolute",left:`${m.pct}%`,fontSize:"0.58rem",color:C.muted,fontFamily:"monospace",transform:"translateX(-50%)",top:6,whiteSpace:"nowrap"}}>{m.label}</span>
+            ))}
+          </div>
+
+          {/* Job 橫條 */}
+          <div style={{position:"relative"}}>
+            {todayPct>=0&&todayPct<=100&&(
+              <>
+                <div style={{position:"absolute",top:0,bottom:0,left:`${todayPct}%`,width:1,background:C.red,opacity:0.8,zIndex:5}}/>
+                <div style={{position:"absolute",top:2,left:`${todayPct}%`,transform:"translateX(-50%)",fontSize:"0.55rem",color:C.red,fontFamily:"monospace",fontWeight:700,zIndex:6,background:C.bg,padding:"0 2px"}}>今</div>
+              </>
+            )}
+            {active.map((j,i)=>{
+              const cc=CC[j.client_id]||CC.default;
+              const l=pct(j.start_date),r=pct(j.deadline),w=r-l;
+              const actual=+(j["actual_hours"]||0),est=+(j["est_hours"]||0);
+              const prog=est>0?Math.min(actual/est,1):0;
+              const days=daysUntil(j.deadline);
+              const dot=days!=null&&days<=3?C.red:days!=null&&days<=7?C.amber:cc;
+              return(
+                <div key={i} style={{height:ROW,position:"relative",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+                  {/* 條底色 */}
+                  <div style={{position:"absolute",left:`${l}%`,width:`${Math.max(w,0.5)}%`,height:24,top:"50%",transform:"translateY(-50%)",background:`${cc}20`,border:`1px solid ${cc}45`,borderRadius:5,overflow:"hidden",minWidth:4}}>
+                    {prog>0&&<div style={{position:"absolute",inset:0,width:`${prog*100}%`,background:`${cc}55`,borderRadius:5}}/>}
+                  </div>
+                  {/* Deadline 點 */}
+                  <div style={{position:"absolute",left:`${r}%`,width:7,height:7,borderRadius:"50%",background:dot,transform:"translateX(-50%)",zIndex:3,boxShadow:days!=null&&days<=7?`0 0 6px ${dot}`:undefined}}/>
+                  {/* 工時 % label */}
+                  {w>6&&prog>0&&(
+                    <div style={{position:"absolute",left:`${l+0.5}%`,fontSize:"0.55rem",fontFamily:"monospace",color:cc,top:"50%",transform:"translateY(-50%)",paddingLeft:4,whiteSpace:"nowrap",zIndex:2}}>
+                      {Math.round(prog*100)}%
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{padding:"10px 20px 0",display:"flex",gap:14,flexWrap:"wrap"}}>
+        {[[C.red,"≤ 3日到期"],[C.amber,"≤ 7日到期"]].map(([c,t])=>(
+          <div key={t} style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
+            <span style={{fontSize:"0.6rem",color:C.muted}}>{t}</span>
+          </div>
+        ))}
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:18,height:8,borderRadius:3,background:"rgba(232,168,56,0.5)"}}/>
+          <span style={{fontSize:"0.6rem",color:C.muted}}>工時完成度</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:1,height:12,background:C.red,opacity:0.8}}/>
+          <span style={{fontSize:"0.6rem",color:C.muted}}>今日</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+  
 function CapacityView({data}){
   const{capacity={}}=data;
   const weekly=(capacity.weekly||[]).slice().reverse();
@@ -301,7 +417,7 @@ const NAV=[
   {id:"dashboard",label:"總覽",  icon:"◈"},
   {id:"projects", label:"專案",  icon:"▦"},
   {id:"capacity", label:"容量",  icon:"⏱"},
-  {id:"gantt",    label:"甘特圖",icon:"▤",soon:true},
+  {id:"gantt",    label:"甘特圖",icon:"▤"},
   {id:"finance",  label:"財務",  icon:"◎",soon:true},
 ];
 
@@ -379,7 +495,8 @@ function App(){
         {data&&tab==="dashboard"&&<DashboardView data={data}/>}
         {data&&tab==="projects" &&<ProjectsView data={data}/>}
         {data&&tab==="capacity" &&<CapacityView data={data}/>}
-        {["gantt","finance"].includes(tab)&&(
+        {data&&tab==="gantt"&&<GanttView data={data}/>}
+        {tab==="finance"&&(
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:280,gap:10,opacity:0.45}}>
             <div style={{fontSize:"2.5rem"}}>{tab==="gantt"?"📅":"💰"}</div>
             <div style={{fontSize:"0.78rem",color:C.muted,fontFamily:"monospace"}}>COMING SOON</div>
