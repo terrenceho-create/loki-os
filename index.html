@@ -106,6 +106,131 @@ const Badge=({status})=>{
   return<span style={{fontSize:"0.6rem",fontFamily:"monospace",textTransform:"uppercase",letterSpacing:"0.05em",color:c,background:`${c}20`,border:`1px solid ${c}40`,padding:"2px 7px",borderRadius:4}}>{status}</span>;
 };
 
+/* ── WEEK PACE CARD ──────────────────────── */
+function WeekPaceCard({actual}){
+  const TK='loki_weekly_target';
+  const[target,setTarget]=useState(()=>parseFloat(localStorage.getItem(TK)||'25'));
+  const[editing,setEditing]=useState(false);
+  const[tmp,setTmp]=useState('');
+
+  const today=new Date();
+  const dow=today.getDay();
+  const dayNum=dow===0?7:dow; // Mon=1 ... Sun=7
+  const dayNames=['','一','二','三','四','五','六','日'];
+  const expected=parseFloat((target/7*dayNum).toFixed(2));
+  const act=parseFloat(actual||0);
+  const diff=parseFloat((act-expected).toFixed(2));
+  const remaining=Math.max(target-act,0);
+  const daysLeft=7-dayNum;
+  const dailyNeeded=daysLeft>0?remaining/daysLeft:0;
+
+  const save=()=>{
+    const v=parseFloat(tmp);
+    if(!isNaN(v)&&v>0){localStorage.setItem(TK,v);setTarget(v);}
+    setEditing(false);
+  };
+
+  return(
+    <Card>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <Lbl>本週 Pace</Lbl>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:"0.62rem",color:C.muted,fontFamily:"monospace"}}>
+            星期{dayNames[dayNum]}（Day {dayNum}/7）
+          </span>
+          {editing?(
+            <div style={{display:"flex",gap:4,alignItems:"center"}}>
+              <input value={tmp} onChange={e=>setTmp(e.target.value)} autoFocus
+                onKeyDown={e=>e.key==='Enter'&&save()}
+                style={{width:48,background:"rgba(255,255,255,0.08)",border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 6px",color:C.text,fontSize:"0.7rem",fontFamily:"monospace",textAlign:"center"}}/>
+              <button onClick={save} style={{fontSize:"0.7rem",color:C.accent,background:"none",border:"none"}}>✓</button>
+              <button onClick={()=>setEditing(false)} style={{fontSize:"0.7rem",color:C.dim,background:"none",border:"none"}}>✕</button>
+            </div>
+          ):(
+            <button onClick={()=>{setTmp(String(target));setEditing(true);}}
+              style={{fontSize:"0.6rem",color:C.muted,background:"rgba(255,255,255,0.06)",border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>
+              目標 {target}h ✎
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Numbers */}
+      <div style={{display:"flex",gap:12,alignItems:"baseline",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:C.muted,fontFamily:"monospace",marginBottom:2}}>今週實際</div>
+          <div style={{fontSize:"1.9rem",fontFamily:"'Fraunces',serif",color:C.accent,lineHeight:1}}>{act.toFixed(1)}h</div>
+        </div>
+        <div style={{fontSize:"1rem",color:C.dim,alignSelf:"center",margin:"0 2px"}}>/</div>
+        <div>
+          <div style={{fontSize:"0.58rem",color:C.muted,fontFamily:"monospace",marginBottom:2}}>今日應達</div>
+          <div style={{fontSize:"1.9rem",fontFamily:"'Fraunces',serif",color:C.muted,lineHeight:1}}>{expected.toFixed(1)}h</div>
+        </div>
+        <div style={{marginLeft:"auto",textAlign:"right",alignSelf:"center"}}>
+          <div style={{fontSize:"1.1rem",fontFamily:"'Fraunces',serif",fontWeight:600,color:diff>=0?C.green:C.red}}>
+            {diff>=0?`+${diff.toFixed(1)}`:diff.toFixed(1)}h
+          </div>
+          <div style={{fontSize:"0.62rem",color:diff>=0?C.green:C.red}}>{diff>=0?'領先':'落後'}</div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{position:"relative",marginBottom:24}}>
+        <div style={{height:8,background:"rgba(255,255,255,0.07)",borderRadius:4,position:"relative",overflow:"visible"}}>
+          {/* Actual fill */}
+          <div style={{position:"absolute",left:0,top:0,bottom:0,
+            width:`${Math.min(act/target,1)*100}%`,
+            background:diff>=0?C.green:C.red,borderRadius:4}}/>
+          {/* Expected marker */}
+          <div style={{position:"absolute",top:-5,bottom:-5,
+            left:`${Math.min(expected/target,1)*100}%`,
+            width:2,background:C.accent,borderRadius:1,
+            transform:"translateX(-50%)",zIndex:2}}/>
+        </div>
+        {/* Expected label */}
+        <div style={{position:"absolute",top:12,
+          left:`${Math.min(expected/target,1)*100}%`,
+          transform:"translateX(-50%)",
+          fontSize:"0.55rem",color:C.accent,fontFamily:"monospace",whiteSpace:"nowrap"}}>
+          {expected.toFixed(1)}h ↑
+        </div>
+        {/* Target label */}
+        <div style={{position:"absolute",top:12,right:0,
+          fontSize:"0.55rem",color:C.dim,fontFamily:"monospace"}}>
+          {target}h
+        </div>
+      </div>
+
+      {/* Bottom */}
+      <div style={{paddingTop:12,borderTop:`1px solid ${C.border}`,
+        display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        {daysLeft>0?(
+          <>
+            <span style={{fontSize:"0.7rem",color:C.muted}}>
+              剩 <strong style={{color:C.text}}>{daysLeft}</strong> 日
+            </span>
+            <span style={{fontSize:"0.7rem",color:C.muted}}>
+              尚需 <strong style={{color:remaining>0?C.amber:C.green}}>{remaining.toFixed(1)}h</strong>
+            </span>
+            <span style={{fontSize:"0.7rem",color:C.muted}}>
+              每日需 <strong style={{
+                color:dailyNeeded>6?C.red:dailyNeeded>3?C.amber:C.green
+              }}>{dailyNeeded.toFixed(1)}h</strong>
+            </span>
+          </>
+        ):(
+          <span style={{fontSize:"0.75rem",fontFamily:"monospace",
+            color:remaining===0?C.green:C.red}}>
+            {remaining===0?'✅ 本週目標完成！':`本週結束，差 ${remaining.toFixed(1)}h`}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+  
 /* ── SETUP SCREEN ────────────────────────── */
 function SetupScreen({onSave}){
   const[url,setUrl]=useState("");
@@ -166,6 +291,7 @@ function DashboardView({data}){
         <KPI label="本週 Utilization" value={pct(d.utilization_week)} accent={d.utilization_week>=0.8?C.green:d.utilization_week>=0.5?C.amber:C.red} icon="⚡"/>
         <KPI label="本月 Billable" value={`${(+d.billable_hrs_month||0).toFixed(1)}h`} sub="月累計" accent={C.teal} icon="📋"/>
         <KPI label="積壓工時" value={`${(+d.backlog_hrs||0).toFixed(1)}h`} sub={`≈ ${backlogDays} 日（${avgDailyHrs.toFixed(1)}h/日均值）`} accent={(+d.backlog_hrs||0)>40?C.red:C.muted} icon="⏳"/>
+        <WeekPaceCard actual={d.billable_hrs_week}/>
       </div>
       {weekly.length>0&&(
         <Card>
