@@ -311,7 +311,7 @@ function GanttView({data}){
   });
   const maxC=Math.max(...workload.map(w=>w.committed),WEEKLY_TARGET,1);
 
-  const ROW=44,LW=170,WH=38;
+  const ROW=44,LW=170,WH=70;
 
   return(
     <Card style={{padding:"16px 0",overflow:"hidden"}}>
@@ -407,6 +407,11 @@ function GanttView({data}){
                     {w>7&&prog>0&&<div style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:"0.55rem",fontFamily:"monospace",color:cc}}>{Math.round(prog*100)}%</div>}
                   </div>
                   <div style={{position:"absolute",left:`${r}%`,width:7,height:7,borderRadius:"50%",background:dot,transform:"translateX(-50%)",zIndex:4,boxShadow:days!=null&&days<=7?`0 0 6px ${dot}`:undefined}}/>
+                    {days!=null&&(
+                      <div style={{position:"absolute",left:`${r}%`,top:"28%",transform:"translateX(-50%)",fontSize:"0.52rem",color:dot,fontFamily:"monospace",fontWeight:700,whiteSpace:"nowrap",zIndex:5,opacity:0.9}}>
+                        {days<0?`逾${Math.abs(days)}日`:days===0?"今日":`${days}日`}
+                      </div>
+                    )}
                 </div>
               );
             })}
