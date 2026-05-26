@@ -221,7 +221,7 @@ function DashboardView({data}){
 /* ── PROJECTS VIEW ───────────────────────── */
 function ProjectsView({data}){
   const{jobs=[]}=data;
-  const active=jobs.filter(j=>["Deposit Received","Footage In","Editing","First Cut Sent","Revisions"].includes(j.status));
+  const active=jobs.filter(j=>["Footage In","Editing","First Cut Sent","Revisions"].includes(j.status));
   const COLS=[
     {id:"Footage In", label:"Footage In",      note:"素材到手，未開剪"},
     {id:"Editing",          label:"Editing",         note:"剪緊"},
@@ -280,7 +280,7 @@ function ProjectsView({data}){
   );
 }
 
-/* ── GRANT VIEW ───────────────────────── */
+/* ── GANTT VIEW ───────────────────────── */
 function GanttView({data}){
   const{jobs=[],capacity={}}=data;
   const today=new Date();today.setHours(0,0,0,0);
@@ -330,7 +330,7 @@ function GanttView({data}){
   });
   const maxC=Math.max(...workload.map(w=>w.committed),WEEKLY_TARGET,1);
 
-  const ROW=44,LW=170,WH=38;
+  const ROW=44,LW=170,WH=70;
 
   return(
     <Card style={{padding:"16px 0",overflow:"hidden"}}>
@@ -417,8 +417,6 @@ function GanttView({data}){
               const l=pct(j.start_date),r=pct(j.deadline),w=Math.max(r-l,0.5);
               const actual=+(j["actual_hours"]||0),est=+(j["est_hours"]||0);
               const prog=est>0?Math.min(actual/est,1):0;
-              const days=daysUntil(j.deadline);
-              {/*const dot=days!=null&&days<=3?C.red:days!=null&&days<=7?C.amber:cc;*/}
               return(
                 <div key={i} style={{height:ROW,position:"relative",borderBottom:`1px solid ${C.border}`}}>
                   <div style={{position:"absolute",left:`${l}%`,width:`${w}%`,height:24,top:"50%",transform:"translateY(-50%)",background:`${cc}20`,border:`1px solid ${cc}45`,borderRadius:5,overflow:"hidden",minWidth:4,zIndex:2}}>
@@ -437,8 +435,6 @@ function GanttView({data}){
         {[
           [()=><div style={{width:1,height:12,background:C.red,opacity:0.9}}/>,"今日"],
           [()=><div style={{width:14,height:8,background:"rgba(232,168,56,0.15)",border:"1px solid rgba(232,168,56,0.3)",borderRadius:2}}/>,"本週"],
-          [()=><div style={{width:7,height:7,borderRadius:"50%",background:C.red}}/>,"≤3日"],
-          [()=><div style={{width:7,height:7,borderRadius:"50%",background:C.amber}}/>,"≤7日"],
           [()=><div style={{width:16,height:7,borderRadius:3,background:"rgba(232,168,56,0.5)"}}/>,"完成度"],
           [()=><div style={{width:14,height:8,borderRadius:"2px 2px 0 0",background:"rgba(126,184,164,0.5)"}}/>,"週負荷"],
         ].map(([Icon,label],i)=>(
