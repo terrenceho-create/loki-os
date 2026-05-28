@@ -640,6 +640,7 @@ const NAV=[
 function App(){
   const[isDark,setIsDark]=useState(()=>{const t=localStorage.getItem('loki_theme')||'dark';applyTheme(t);return t==='dark';});
   const toggleTheme=()=>{const n=!isDark;applyTheme(n?'dark':'light');localStorage.setItem('loki_theme',n?'dark':'light');setIsDark(n);};
+  const[gasUrl,setGasUrl]=useState(()=>localStorage.getItem(KEY)||null);
   const[data,setData]        =useState(null);
   const[loading,setLoading]  =useState(false);
   const[error,setError]      =useState(null);
