@@ -32,11 +32,10 @@
 const{useState,useEffect,useCallback}=React;
 
 /* ── COLOURS ─────────────────────────────── */
-const C={
-  bg:"#0B0E14",surface:"rgba(255,255,255,0.03)",border:"rgba(255,255,255,0.07)",
-  accent:"#E8A838",teal:"#7EB8A4",violet:"#A78BFA",green:"#4ade80",
-  red:"#f87171",amber:"#fb923c",text:"#e2e8f0",muted:"#6b7280",dim:"#374151"
-};
+const DARK={bg:"#0B0E14",surface:"rgba(255,255,255,0.03)",border:"rgba(255,255,255,0.07)",accent:"#E8A838",teal:"#7EB8A4",violet:"#A78BFA",green:"#4ade80",red:"#f87171",amber:"#fb923c",text:"#e2e8f0",muted:"#6b7280",dim:"#374151"};
+const LIGHT={bg:"#F6F4EF",surface:"rgba(0,0,0,0.04)",border:"rgba(0,0,0,0.09)",accent:"#B07D0A",teal:"#2E7A6A",violet:"#6244A8",green:"#16a34a",red:"#dc2626",amber:"#c2720a",text:"#1a1a2e",muted:"#6b7280",dim:"#9ca3af"};
+const C={...DARK};
+const applyTheme=t=>{Object.assign(C,t==='light'?LIGHT:DARK);document.body.style.background=C.bg;};
 const CC={GetGo:"#E8A838",LJ:"#A78BFA",SBDW:"#7EB8A4",TL:"#60a5fa",LG:"#f472b6",default:"#9ca3af"};
 const SC={
   "Lead":"#6b7280","Quoted":"#9A7D0A","Confirmed":"#1A5276","Deposit Received":"#196F3D",
@@ -634,7 +633,8 @@ const NAV=[
 ];
 
 function App(){
-  const[gasUrl,setGasUrl]    =useState(()=>localStorage.getItem(KEY)||null);
+  const[isDark,setIsDark]=useState(()=>{const t=localStorage.getItem('loki_theme')||'dark';applyTheme(t);return t==='dark';});
+  const toggleTheme=()=>{const n=!isDark;applyTheme(n?'dark':'light');localStorage.setItem('loki_theme',n?'dark':'light');setIsDark(n);};
   const[data,setData]        =useState(null);
   const[loading,setLoading]  =useState(false);
   const[error,setError]      =useState(null);
@@ -677,7 +677,9 @@ function App(){
             style={{background:"rgba(255,255,255,0.06)",border:`1px solid ${C.border}`,color:loading?C.dim:C.teal,borderRadius:6,padding:"4px 10px",fontSize:"0.7rem",fontFamily:"monospace"}}>
             {loading?"...":"↻ 刷新"}
           </button>
-          <button onClick={disc} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.dim,borderRadius:6,padding:"4px 10px",fontSize:"0.7rem",fontFamily:"monospace"}}>✕</button>
+          <button onClick={toggleTheme} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,borderRadius:6,padding:"4px 10px",fontSize:"0.8rem"}} title={isDark?"切換淺色模式":"切換深色模式"}>
+            {isDark?"☀️":"🌙"}
+          </button>
         </div>
       </div>
       {/* Nav */}
