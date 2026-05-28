@@ -476,8 +476,9 @@ function GanttView({data}){
         </div>
       </div>
 
-      <div style={{display:"flex"}}>
-        <div style={{width:LW,flexShrink:0,paddingLeft:20}}>
+      <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+      <div style={{display:"flex",minWidth:LW+(zoom===14?420:zoom===60?750:950)}}>
+        <div style={{width:LW,flexShrink:0,paddingLeft:20,position:"sticky",left:0,background:C.bg,zIndex:8}}>
           <div style={{height:28}}/>
           <div style={{height:WH,display:"flex",alignItems:"center"}}>
             <span style={{fontSize:"0.58rem",color:C.muted,fontFamily:"monospace"}}>週工時負荷</span>
@@ -496,7 +497,8 @@ function GanttView({data}){
           })}
         </div>
 
-        <div style={{flex:1,overflowX:"auto",position:"relative",minWidth:0,paddingRight:16}}>
+        <div style={{flex:1,overflowX:"auto",WebkitOverflowScrolling:"touch",minWidth:0}}>
+        <div style={{position:"relative",minWidth:zoom===14?420:zoom===60?750:950,paddingRight:16}}>
 
           {/* 日期標籤 */}
           <div style={{height:28,position:"relative",borderBottom:`1px solid ${C.border}`}}>
@@ -523,6 +525,7 @@ function GanttView({data}){
             {/* 目標線 */}
             <div style={{position:"absolute",left:0,right:0,bottom:`${(WEEKLY_TARGET/maxC)*(WH-10)+4}px`,borderTop:`1px dashed ${C.accent}50`,zIndex:2,pointerEvents:"none"}}/>
           </div>
+        
 
           {/* Job 橫條區 */}
           <div style={{position:"relative"}}>
@@ -559,7 +562,9 @@ function GanttView({data}){
             })}
           </div>
         </div>
-      </div>
+        </div> {/* close timeline scroll */}
+      </div>{/* close flex */}
+      </div>{/* close scroll wrapper */}
 
       {/* Legend */}
       <div style={{padding:"10px 20px 0",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
