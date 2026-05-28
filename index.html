@@ -47,7 +47,13 @@ const SC={
 /* ── HELPERS ─────────────────────────────── */
 const hkd=n=>{if(n===""||n==null)return"—";const a=Math.abs(n),s=a>=10000?`HK$${(a/1000).toFixed(1)}k`:`HK$${Math.round(a).toLocaleString()}`;return n<0?`-${s}`:s};
 const pct=n=>n?`${Math.round(n*100)}%`:"0%";
-const daysUntil=d=>{if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d)-t)/86400000)};
+const parseD=d=>{
+  if(!d)return null;
+  if(d instanceof Date)return d;
+  const[y,m,day]=String(d).split('-').map(Number);
+  return new Date(y,m-1,day); // 本地時間，避免 UTC 偏差
+};
+const daysUntil=d=>{if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return Math.ceil((parseD(d)-t)/86400000)};
 
 /* ── CSS BAR CHART ───────────────────────── */
 function BarChart({data,segments,labelKey="week_start",refLine,height=150}){
@@ -414,7 +420,7 @@ function GanttView({data}){
 
   const active=jobs
     .filter(j=>!["Closed","Delivered"].includes(j.status)&&j.start_date&&j.deadline)
-    .sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+    .sort((a,b)=>parseD(a.start_date)-parseD(b.start_date));
 
   if(!active.length)return(
     <Card><div style={{color:C.muted,textAlign:"center",padding:40,fontFamily:"monospace",fontSize:"0.8rem"}}>冇進行中嘅 Jobs 有 start_date + deadline</div></Card>
@@ -429,7 +435,7 @@ function GanttView({data}){
   const rEnd=new Date(today);
   rEnd.setDate(rEnd.getDate()+cfg.after);
   const totalMs=rEnd-rStart;
-  const pct=d=>Math.max(0,Math.min(100,((new Date(d)-rStart)/totalMs)*100));
+  const pct=d=>Math.max(0,Math.min(100,((parseD(d)-rStart)/totalMs)*100));
   const todayPct=pct(today);
 
   const weeks=[];
@@ -444,7 +450,7 @@ function GanttView({data}){
     const wS=w.date,wE=new Date(wS);wE.setDate(wE.getDate()+7);
     let committed=0;
     active.forEach(j=>{
-      const jS=new Date(j.start_date),jE=new Date(j.deadline);
+      const jS=parseD(j.start_date),jE=parseD(j.deadline);
       if(jS>=wE||jE<=wS)return;
       const remaining=Math.max((+(j.est_hours||0))-(+(j["actual_hours"]||0)),0);
       const remDays=Math.max((jE-Math.max(today,jS))/86400000,1);
