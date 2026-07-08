@@ -673,6 +673,7 @@ function CapacityView({data}){
 }
 
 /* ── MAIN APP ────────────────────────────── */
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxuS4CkZOnssCOnHIaPA7UFOCtvq6JjBmR5LQjAzNTfsUlc3qCAc_jtk4WFM-OEytGG/exec";
 const KEY="loki_gas_url";
 const NAV=[
   {id:"dashboard",label:"總覽",  icon:"◈"},
@@ -685,7 +686,7 @@ const NAV=[
 function App(){
   const[isDark,setIsDark]=useState(()=>{const t=localStorage.getItem('loki_theme')||'dark';applyTheme(t);return t==='dark';});
   const toggleTheme=()=>{const n=!isDark;applyTheme(n?'dark':'light');localStorage.setItem('loki_theme',n?'dark':'light');setIsDark(n);};
-  const[gasUrl,setGasUrl]=useState(()=>localStorage.getItem(KEY)||null);
+  const[gasUrl,setGasUrl]=useState(()=>localStorage.getItem(KEY)||DEFAULT_GAS_URL);
   const[data,setData]        =useState(null);
   const[loading,setLoading]  =useState(false);
   const[error,setError]      =useState(null);
@@ -706,6 +707,21 @@ function App(){
   },[]);
 
   useEffect(()=>{if(gasUrl)fetchData(gasUrl);},[gasUrl]);
+
+  const[unlocked,setUnlocked]=useState(()=>sessionStorage.getItem('loki_unlock')==='yes');
+  if(!unlocked)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:"0.65rem",fontFamily:"monospace",color:C.muted,letterSpacing:"0.2em",marginBottom:16}}>LOKI CREATIVES OS</div>
+        <input type="password" placeholder="密碼" autoFocus onKeyDown={e=>{
+          if(e.key==='Enter'&&e.target.value==='228'){
+            sessionStorage.setItem('loki_unlock','yes');
+            setUnlocked(true);
+          }
+        }} style={{padding:"10px 16px",borderRadius:8,border:`1px solid ${C.border}`,background:"rgba(255,255,255,0.05)",color:C.text,fontSize:"0.9rem",textAlign:"center",outline:"none",width:200}}/>
+      </div>
+    </div>
+  );
 
   const save=url=>{localStorage.setItem(KEY,url);setGasUrl(url);};
   const disc=()=>{localStorage.removeItem(KEY);setGasUrl(null);setData(null);};
