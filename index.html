@@ -494,6 +494,10 @@ function GanttView({data}){
   });
   const maxC=Math.max(...workload.map(w=>w.committed),WEEKLY_TARGET,1);
 
+  const isOverdue=j=>parseD(j.deadline)<today;
+  const overdueDays=j=>Math.round((today-parseD(j.deadline))/86400000);
+  const hasConflict=(j,idx)=>active.some((k,i)=>i!==idx&&parseD(k.start_date)<parseD(j.deadline)&&parseD(k.deadline)>parseD(j.start_date));
+
   const ROW=44,LW=170,WH=70;
 
   return(
@@ -518,12 +522,20 @@ function GanttView({data}){
           </div>
           {active.map((j,i)=>{
             const cc=CC[j.client_id]||CC.default;
+            const od=isOverdue(j);
+            const cf=hasConflict(j,i);
             return(
               <div key={i} style={{height:ROW,display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}`}}>
-                <div style={{width:3,height:22,borderRadius:2,background:cc,marginRight:8,flexShrink:0}}/>
+                <div style={{width:3,height:22,borderRadius:2,background:od?C.red:cc,marginRight:8,flexShrink:0}}/>
                 <div style={{overflow:"hidden",width:LW-24}}>
-                  <div style={{fontSize:"0.72rem",color:C.text,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{j.project_name}</div>
-                  <div style={{fontSize:"0.6rem",color:C.muted}}>{j.client_id} · {j.status}</div>
+                  <div style={{fontSize:"0.72rem",color:C.text,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis"}}>{j.project_name}</span>
+                    {od&&<span title="逾期" style={{fontSize:"0.6rem",flexShrink:0}}>⚠️</span>}
+                    {cf&&<span title="撞期" style={{fontSize:"0.6rem",flexShrink:0}}>⏱️</span>}
+                  </div>
+                  <div style={{fontSize:"0.6rem",color:od?C.red:C.muted}}>
+                    {j.client_id} · {j.status}{od?` · 逾期${overdueDays(j)}日`:""}
+                  </div>
                 </div>
               </div>
             );
@@ -593,14 +605,18 @@ function GanttView({data}){
             {/* Job 橫條 */}
             {active.map((j,i)=>{
               const cc=CC[j.client_id]||CC.default;
+              const od=isOverdue(j);
+              const cf=hasConflict(j,i);
               const l=pct(j.start_date),r=pct(j.deadline),w=Math.max(r-l,0.5);
               const actual=+(j["actual_hours"]||0),est=+(j["est_hours"]||0);
               const prog=est>0?Math.min(actual/est,1):0;
+              const barBorder=od?`1px solid ${C.red}`:cf?`1px dashed ${C.amber}`:`1px solid ${cc}45`;
               return(
                 <div key={i} style={{height:ROW,position:"relative",borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{position:"absolute",left:`${l}%`,width:`${w}%`,height:24,top:"50%",transform:"translateY(-50%)",background:`${cc}20`,border:`1px solid ${cc}45`,borderRadius:5,overflow:"hidden",minWidth:4,zIndex:2}}>
-                    {prog>0&&<div style={{position:"absolute",inset:0,width:`${prog*100}%`,background:`${cc}55`,borderRadius:5}}/>}
-                    {w>7&&prog>0&&<div style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:"0.55rem",fontFamily:"monospace",color:cc}}>{Math.round(prog*100)}%</div>}
+                  <div style={{position:"absolute",left:`${l}%`,width:`${w}%`,height:24,top:"50%",transform:"translateY(-50%)",background:od?`${C.red}18`:`${cc}20`,border:barBorder,borderRadius:5,overflow:"hidden",minWidth:4,zIndex:2}}>
+                    {prog>0&&<div style={{position:"absolute",inset:0,width:`${prog*100}%`,background:od?`${C.red}45`:`${cc}55`,borderRadius:5}}/>}
+                    {w>7&&prog>0&&<div style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:"0.55rem",fontFamily:"monospace",color:od?C.red:cc}}>{Math.round(prog*100)}%</div>}
+                    {od&&r<=100&&<div style={{position:"absolute",right:2,top:"50%",transform:"translateY(-50%)",fontSize:"0.5rem"}}>⚠️</div>}
                   </div>
                 </div>
               );
@@ -618,6 +634,8 @@ function GanttView({data}){
           [()=><div style={{width:14,height:8,background:"rgba(232,168,56,0.15)",border:"1px solid rgba(232,168,56,0.3)",borderRadius:2}}/>,"本週"],
           [()=><div style={{width:16,height:7,borderRadius:3,background:"rgba(232,168,56,0.5)"}}/>,"完成度"],
           [()=><div style={{width:14,height:8,borderRadius:"2px 2px 0 0",background:"rgba(126,184,164,0.5)"}}/>,"週負荷"],
+          [()=><span style={{fontSize:"0.65rem"}}>⚠️</span>,"逾期"],
+          [()=><span style={{fontSize:"0.65rem"}}>⏱️</span>,"撞期(時段重疊)"],
         ].map(([Icon,label],i)=>(
           <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
             <Icon/><span style={{fontSize:"0.6rem",color:C.muted}}>{label}</span>
